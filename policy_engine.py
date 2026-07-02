@@ -24,9 +24,6 @@ class PolicyResult:
 
 # ============================================================
 # Text Normalization
-# Purpose:
-# Reduce simple evasion through casing, punctuation, spacing,
-# misspellings, and common leetspeak substitutions.
 # ============================================================
 
 def normalize_text(text: str) -> str:
@@ -34,12 +31,6 @@ def normalize_text(text: str) -> str:
     normalized = normalized.lower()
 
     replacements = {
-        "0": "o",
-        "1": "i",
-        "3": "e",
-        "4": "a",
-        "5": "s",
-        "7": "t",
         "@": "a",
         "$": "s",
     }
@@ -53,6 +44,7 @@ def normalize_text(text: str) -> str:
         "environement": "environment",
         "enviornment": "environment",
         "envrionment": "environment",
+        "varible": "variable",
         "varibles": "variables",
         "vairables": "variables",
         "variablez": "variables",
@@ -84,27 +76,29 @@ def normalize_text(text: str) -> str:
 # ============================================================
 
 PROMPT_INJECTION_PATTERNS = [
-    r"\bignore\s+(all\s+)?(previous|prior|above|earlier)\s+instruction(s)?\b",
-    r"\bdisregard\s+(all\s+)?(previous|prior|above|earlier)\s+instruction(s)?\b",
-    r"\bforget\s+(all\s+)?(previous|prior|above|earlier|your)\s+instruction(s)?\b",
+    r"\bignore\s+(all\s+)?(previous|prior|above|earlier|system|developer)\s+instruction(s)?\b",
+    r"\bdisregard\s+(all\s+)?(previous|prior|above|earlier|system|developer)\s+instruction(s)?\b",
+    r"\bforget\s+(all\s+)?(previous|prior|above|earlier|your|system|developer)\s+instruction(s)?\b",
     r"\boverride\s+(your\s+)?instruction(s)?\b",
     r"\bbypass\s+(restriction(s)?|rule(s)?|guardrail(s)?|policy|policies|security|control(s)?)\b",
     r"\bdisable\s+(safety|security|guardrail(s)?|filter(s)?|policy|policies)\b",
     r"\bjailbreak\b",
+    r"\bdeveloper\s+mode\b",
     r"\bact\s+as\s+dan\b",
     r"\byou\s+are\s+now\s+unrestricted\b",
     r"\bdo\s+not\s+follow\s+(your\s+)?instruction(s)?\b",
     r"\bignore\s+(the\s+)?rules\b",
     r"\bignore\s+(the\s+)?policy\b",
+    r"\bpretend\s+(you\s+are\s+)?unrestricted\b",
 ]
 
 SYSTEM_PROMPT_PATTERNS = [
-    r"\breveal\s+(your\s+)?(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
-    r"\bshow\s+(me\s+)?(your\s+)?(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
-    r"\bprint\s+(your\s+)?(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
-    r"\btell\s+me\s+(your\s+)?(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
-    r"\bwhat\s+are\s+your\s+(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
-    r"\b(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\breveal\s+(your\s+)?(system|developer|internal|hidden)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\bshow\s+(me\s+)?(your\s+)?(system|developer|internal|hidden)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\bprint\s+(your\s+)?(system|developer|internal|hidden)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\btell\s+me\s+(your\s+)?(system|developer|internal|hidden)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\bwhat\s+are\s+your\s+(system|developer|internal|hidden)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\b(system|developer|internal|hidden)\s+(prompt|instruction(s)?|message|configuration|config)\b",
     r"\bsystem\s+security\s+details\b",
     r"\binternal\s+security\s+details\b",
     r"\bsecurity\s+configuration\b",
@@ -112,14 +106,12 @@ SYSTEM_PROMPT_PATTERNS = [
 ]
 
 RECON_PATTERNS = [
-    r"\blist\s+(your\s+)?environment\s+variable(s)?\b",
-    r"\bshow\s+(me\s+)?(your\s+)?environment\s+variable(s)?\b",
-    r"\bprint\s+(your\s+)?environment\s+variable(s)?\b",
-    r"\bdump\s+(your\s+)?environment\s+variable(s)?\b",
-    r"\bdisplay\s+(your\s+)?environment\s+variable(s)?\b",
-    r"\bshow\s+(me\s+)?env\s+var(s)?\b",
-    r"\blist\s+env\s+var(s)?\b",
-    r"\bprintenv\b",
+    r"\b(list|show|print|dump|display|give|provide)\s+(me\s+)?(your\s+)?(all\s+)?(env|environment)\s+variable(s)?\b",
+    r"\bwhat\s+(are|is)\s+(your\s+)?(env|environment)\s+variable(s)?\b",
+    r"\b(list|show|print|dump|display|give|provide)\s+(me\s+)?(your\s+)?(system|runtime|server|host)\s+(info|information|details|configuration|config)\b",
+    r"\bshow\s+(me\s+)?\.?env\b",
+    r"\b(cat|open|read|print|show)\s+\.?env\b",
+    r"\b(env|printenv)\b",
     r"\bwhoami\b",
     r"\buname\s+a\b",
     r"\bhostname\b",
@@ -127,35 +119,29 @@ RECON_PATTERNS = [
     r"\bipconfig\b",
     r"\bnetstat\b",
     r"\bps\s+aux\b",
-    r"\blist\s+(local\s+)?file(s)?\b",
-    r"\bshow\s+(me\s+)?(local\s+)?file(s)?\b",
-    r"\bshow\s+(me\s+)?(your\s+)?system\s+information\b",
-    r"\bgive\s+(me\s+)?(your\s+)?system\s+information\b",
+    r"\b(list|show|print|display|read|open)\s+(me\s+)?(your\s+)?(local\s+)?file(s)?\b",
     r"\bwhat\s+(operating\s+system|os)\s+are\s+you\s+running\b",
-    r"\blist\s+(installed\s+)?package(s)?\b",
-    r"\bshow\s+(installed\s+)?package(s)?\b",
-    r"\bshow\s+(me\s+)?network\s+interface(s)?\b",
-    r"\blist\s+(mounted\s+)?drive(s)?\b",
-    r"\bshow\s+(me\s+)?configuration\s+file(s)?\b",
-    r"\bshow\s+(me\s+)?env\b",
-    r"\bshow\s+(me\s+)?dotenv\b",
+    r"\b(list|show|print|display)\s+(installed\s+)?package(s)?\b",
+    r"\b(show|list|print|display)\s+(me\s+)?network\s+interface(s)?\b",
+    r"\b(list|show|print|display)\s+(mounted\s+)?drive(s)?\b",
+    r"\b(show|list|print|display|read|open)\s+(me\s+)?configuration\s+file(s)?\b",
     r"\bshow\s+(me\s+)?path\b",
-    r"\becho\s+\$path\b",
-    r"\becho\s+\$home\b",
+    r"\becho\s+\$?path\b",
+    r"\becho\s+\$?home\b",
 ]
 
 SECRET_PATTERNS = [
-    r"\bsk\s+[a-zA-Z0-9_\-]{10,}\b",
     r"\bsk-[A-Za-z0-9_\-]{10,}\b",
+    r"\bgsk_[A-Za-z0-9_\-]{10,}\b",
     r"\bAKIA[0-9A-Z]{16}\b",
     r"\bAIza[0-9A-Za-z_\-]{20,}\b",
-    r"\b(api\s*key|secret|password|passwd|pwd|token|bearer\s+token)\b\s*[:=]?\s*[A-Za-z0-9_\-.]{6,}",
-    r"\bgithub\s*token\b\s*[:=]?\s*[A-Za-z0-9_\-]{10,}",
+    r"\b(api\s*key|secret|password|passwd|pwd|token|bearer\s+token)\b\s*[:=]\s*[A-Za-z0-9_\-.]{6,}",
+    r"\bgithub\s*token\b\s*[:=]\s*[A-Za-z0-9_\-]{10,}",
     r"\bprivate\s*key\b",
 ]
 
 SECRET_REQUEST_PATTERNS = [
-    r"\b(give|show|reveal|print|tell|list)\s+(me\s+)?(all\s+)?(api\s+key(s)?|token(s)?|password(s)?|secret(s)?|credential(s)?|private\s+key(s)?)\b",
+    r"\b(give|show|reveal|print|tell|list|dump|display)\s+(me\s+)?(all\s+)?(api\s+key(s)?|token(s)?|password(s)?|secret(s)?|credential(s)?|private\s+key(s)?)\b",
     r"\b(system|internal|admin|root)\s+(password|token|secret|credential|api\s+key)\b",
     r"\bshow\s+(me\s+)?stored\s+secret(s)?\b",
     r"\blist\s+(all\s+)?credential(s)?\b",
@@ -163,16 +149,43 @@ SECRET_REQUEST_PATTERNS = [
 
 PII_VALUE_PATTERNS = [
     r"\b\d{3}-\d{2}-\d{4}\b",
-    r"\b\d{9}\b",
     r"\b\d{16}\b",
     r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
 ]
 
 PII_REQUEST_PATTERNS = [
-    r"\b(give|show|reveal|print|tell|list)\s+(me\s+)?(.*\s+)?(social\s+security\s+number|ssn)\b",
+    r"\b(give|show|reveal|print|tell|list|dump|display)\s+(me\s+)?(.*\s+)?(social\s+security\s+number|ssn)\b",
     r"\b(social\s+security\s+number|ssn)\b",
     r"\b(customer|employee|user|patient|client)\s+(ssn|social\s+security|date\s+of\s+birth|dob|passport|credit\s+card)\b",
     r"\b(personal|private|confidential)\s+(information|data|record(s)?|detail(s)?)\b",
+]
+
+SUSPICIOUS_INTENT_PATTERNS = [
+    r"\bhidden\b",
+    r"\binternal\b",
+    r"\bconfidential\b",
+    r"\bprivate\b",
+    r"\bcredential(s)?\b",
+    r"\bsecret(s)?\b",
+    r"\btoken(s)?\b",
+    r"\bapi\s+key(s)?\b",
+    r"\bpassword(s)?\b",
+    r"\bdeveloper\s+instruction(s)?\b",
+    r"\bsystem\s+instruction(s)?\b",
+    r"\benvironment\s+variable(s)?\b",
+    r"\bconfiguration\s+file(s)?\b",
+]
+
+SUSPICIOUS_ACTION_PATTERNS = [
+    r"\breveal\b",
+    r"\bshow\b",
+    r"\bprint\b",
+    r"\bdump\b",
+    r"\blist\b",
+    r"\bextract\b",
+    r"\bexfiltrate\b",
+    r"\bdecode\b",
+    r"\bexpose\b",
 ]
 
 
@@ -182,6 +195,10 @@ PII_REQUEST_PATTERNS = [
 
 def _matches(patterns: List[str], text: str) -> bool:
     return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
+
+
+def _match_count(patterns: List[str], text: str) -> int:
+    return sum(1 for pattern in patterns if re.search(pattern, text, re.IGNORECASE))
 
 
 def _add_detection(
@@ -224,6 +241,7 @@ def classify_risk_level(score: int) -> str:
 def evaluate_prompt(prompt: str) -> dict:
     raw_text = prompt.strip()
     text = normalize_text(raw_text)
+    raw_lower = raw_text.lower()
 
     score = 0
     reasons: List[str] = []
@@ -241,80 +259,73 @@ def evaluate_prompt(prompt: str) -> dict:
 
     if _matches(PROMPT_INJECTION_PATTERNS, text):
         score = _add_detection(
-            score,
-            reasons,
-            categories,
-            70,
+            score, reasons, categories, 70,
             "Instruction override or prompt injection pattern detected",
             "Prompt Injection",
         )
 
     if _matches(SYSTEM_PROMPT_PATTERNS, text):
         score = _add_detection(
-            score,
-            reasons,
-            categories,
-            60,
+            score, reasons, categories, 65,
             "System, developer, or internal instruction extraction attempt detected",
             "System Prompt Extraction",
         )
 
     if _matches(RECON_PATTERNS, text):
         score = _add_detection(
-            score,
-            reasons,
-            categories,
-            55,
+            score, reasons, categories, 60,
             "System, environment, file, or infrastructure reconnaissance pattern detected",
             "Environment Reconnaissance",
         )
 
-    if _matches(SECRET_PATTERNS, text):
+    if _matches(SECRET_PATTERNS, raw_lower) or _matches(SECRET_PATTERNS, text):
         score = _add_detection(
-            score,
-            reasons,
-            categories,
-            65,
+            score, reasons, categories, 70,
             "Potential credential, token, API key, password, or secret detected",
             "Secret Exposure",
         )
 
     if _matches(SECRET_REQUEST_PATTERNS, text):
         score = _add_detection(
-            score,
-            reasons,
-            categories,
-            65,
+            score, reasons, categories, 70,
             "Request for credentials, secrets, tokens, or sensitive security material detected",
             "Secret Extraction Attempt",
         )
 
-    if _matches(PII_VALUE_PATTERNS, text):
+    if _matches(PII_VALUE_PATTERNS, raw_text):
         score = _add_detection(
-            score,
-            reasons,
-            categories,
-            45,
+            score, reasons, categories, 50,
             "Potential sensitive personal data value detected",
             "Sensitive Data Exposure",
         )
 
     if _matches(PII_REQUEST_PATTERNS, text):
         score = _add_detection(
-            score,
-            reasons,
-            categories,
-            55,
+            score, reasons, categories, 55,
             "Request for regulated or personally identifiable information detected",
             "Sensitive Data Request",
         )
 
+    suspicious_intent_count = _match_count(SUSPICIOUS_INTENT_PATTERNS, text)
+    suspicious_action_count = _match_count(SUSPICIOUS_ACTION_PATTERNS, text)
+
+    if suspicious_intent_count >= 2 and suspicious_action_count >= 1:
+        score = _add_detection(
+            score, reasons, categories, 45,
+            "Multiple suspicious intent indicators detected",
+            "Suspicious Prompt Intent",
+        )
+
+    if suspicious_intent_count >= 3:
+        score = _add_detection(
+            score, reasons, categories, 35,
+            "Clustered sensitive security terms detected",
+            "Suspicious Security Context",
+        )
+
     if len(raw_text) > 3000:
         score = _add_detection(
-            score,
-            reasons,
-            categories,
-            15,
+            score, reasons, categories, 15,
             "Prompt length exceeds local safety threshold",
             "Input Size",
         )
