@@ -2,11 +2,12 @@
 
 [![Author](https://img.shields.io/badge/Author-Jibril%20Anifowoshe-blueviolet)](https://www.linkedin.com/in/jibril-anifowoshe)
 [![Live Application](https://img.shields.io/badge/Live%20Application-Streamlit-FF4B4B)](https://voreenth.streamlit.app)
-[![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![YouTube Demo](https://img.shields.io/badge/YouTube-Demo-red)](https://youtu.be/kFEC75G0gJ8)
 [![Website](https://img.shields.io/badge/Website-jibrilctrl.com-0A66C2)](https://jibrilctrl.com)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Jibril%20Anifowoshe-0077B5)](https://www.linkedin.com/in/jibril-anifowoshe)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
 
 ### AI Runtime Security Gateway for Large Language Models
 
