@@ -220,33 +220,44 @@ def render_metrics():
         st.metric("Avg Risk", metrics["avg_risk"])
 
 
-# Sidebar
+# ============================================================
+# Sidebar Configuration
+# ============================================================
 
 st.sidebar.title("Jibril's Voreenth")
 st.sidebar.caption("AI Runtime Security Gateway")
+st.sidebar.caption("Open-source prototype")
 st.sidebar.caption("Designed and Developed by Jibril Anifowoshe")
 
 backend = st.sidebar.radio(
     "Model Backend",
-    ["Groq Cloud", "Local Ollama", "Demo Mode"],
+    ["☁️ Cloud LLM", "💻 Local Ollama", "🎭 Simulation Mode"],
     index=0,
-    help="Groq Cloud is recommended for the hosted Streamlit app. Local Ollama is intended for local workstation use.",
+    help=(
+        "Cloud LLM is recommended for the hosted Streamlit app. "
+        "Local Ollama is intended for local workstation use. "
+        "Simulation Mode validates the security workflow without calling a model."
+    ),
 )
 
-if backend == "Groq Cloud":
+if backend == "☁️ Cloud LLM":
     model_name = st.sidebar.text_input(
-        "Groq Model",
+        "Cloud Model",
         value=DEFAULT_GROQ_MODEL,
-        help="Example: llama-3.1-8b-instant, llama-3.3-70b-versatile",
+        help="Current provider: Groq. Example: llama-3.1-8b-instant, llama-3.3-70b-versatile",
     )
 
     if check_groq_ready():
-        st.sidebar.success("Groq Cloud: Ready")
+        st.sidebar.success("☁️ Cloud LLM: Ready")
+        st.sidebar.caption(f"Provider: Groq • Model: {model_name}")
     else:
-        st.sidebar.warning("Groq Cloud: API key not configured")
-        st.sidebar.caption("Add GROQ_API_KEY in Streamlit secrets.")
+        st.sidebar.warning("☁️ Cloud LLM: Not Configured")
+        st.sidebar.caption(
+            "No cloud provider credentials detected. "
+            "Configure GROQ_API_KEY, use 💻 Local Ollama, or switch to 🎭 Simulation Mode."
+        )
 
-elif backend == "Local Ollama":
+elif backend == "💻 Local Ollama":
     model_name = st.sidebar.text_input(
         "Ollama Model",
         value=DEFAULT_MODEL,
@@ -254,13 +265,15 @@ elif backend == "Local Ollama":
     )
 
     if check_ollama_health():
-        st.sidebar.success("Ollama: Online")
+        st.sidebar.success("💻 Local Ollama: Online")
     else:
-        st.sidebar.error("Ollama: Offline")
+        st.sidebar.error("💻 Local Ollama: Offline")
+        st.sidebar.caption("Start Ollama locally with: ollama serve")
 
 else:
-    model_name = "demo-mode"
-    st.sidebar.info("Demo Mode: No external model call")
+    model_name = "simulation-mode"
+    st.sidebar.info("🎭 Simulation Mode: No external model call")
+    st.sidebar.caption("Security inspection, scoring, enforcement, and telemetry still run normally.")
 
 st.sidebar.divider()
 st.sidebar.subheader("Security Scenario Library")
@@ -282,18 +295,21 @@ if st.sidebar.button("Reset Local History"):
     st.rerun()
 
 
-# Hero
+# ============================================================
+# Hero / Product Positioning
+# ============================================================
 
 st.markdown(
     """
     <div class="voreenth-hero">
-        <div class="voreenth-kicker">AI Runtime Security Gateway</div>
+        <div class="voreenth-kicker">AI Runtime Security Gateway • Open-Source Prototype</div>
         <div class="voreenth-title">Jibril's Voreenth</div>
         <div class="voreenth-subtitle">Inspect prompts before they reach the model.</div>
         <div class="voreenth-builder">Designed and Developed by <span>Jibril Anifowoshe</span></div>
         <div class="voreenth-tagline">Never Trust. Always Verify.</div>
         <div class="voreenth-description">
-            Detects prompt injection, system prompt extraction, environment reconnaissance,
+            Voreenth is an open-source prototype that demonstrates AI runtime security enforcement.
+            It detects prompt injection, system prompt extraction, environment reconnaissance,
             secret leakage, and sensitive data exposure before requests reach an LLM.
         </div>
         <div class="voreenth-pill-row">
@@ -302,8 +318,9 @@ st.markdown(
             <span class="voreenth-pill">Secret Leakage</span>
             <span class="voreenth-pill">System Prompt Extraction</span>
             <span class="voreenth-pill">SQLite Telemetry</span>
-            <span class="voreenth-pill">Groq Cloud</span>
-            <span class="voreenth-pill">Ollama Runtime</span>
+            <span class="voreenth-pill">Cloud LLM</span>
+            <span class="voreenth-pill">Local Ollama</span>
+            <span class="voreenth-pill">Simulation Mode</span>
         </div>
     </div>
     """,
@@ -315,6 +332,10 @@ metrics_placeholder = st.container()
 
 st.divider()
 
+
+# ============================================================
+# Runtime Request Inspection
+# ============================================================
 
 section_banner(
     "Runtime Request Inspection",
@@ -332,6 +353,10 @@ prompt = st.text_area(
 
 analyze_clicked = st.button("Analyze Prompt", type="primary")
 
+
+# ============================================================
+# Policy Evaluation + Enforcement
+# ============================================================
 
 if analyze_clicked:
     if not prompt.strip():
@@ -426,6 +451,10 @@ with metrics_placeholder:
 
 st.divider()
 
+
+# ============================================================
+# Security Operations Dashboard
+# ============================================================
 
 section_banner(
     "Security Operations Dashboard",
