@@ -1,6 +1,7 @@
 # Voreenth
 
 [![Author](https://img.shields.io/badge/Author-Jibril%20Anifowoshe-blueviolet)](https://www.linkedin.com/in/jibril-anifowoshe)
+[![Live Application](https://img.shields.io/badge/Live%20Application-Streamlit-FF4B4B)](https://voreenth.streamlit.app)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![YouTube Demo](https://img.shields.io/badge/YouTube-Demo-red)](https://youtu.be/kFEC75G0gJ8)
@@ -20,7 +21,7 @@ This project demonstrates a practical enterprise security pattern that can be ap
 ## Links
 
 🚀 **Live Application**
-Link
+https://voreenth.streamlit.app
 
 🎥 **YouTube Walkthrough**  
 https://youtu.be/kFEC75G0gJ8
