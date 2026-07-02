@@ -36,22 +36,61 @@ def check_groq_ready() -> bool:
     return bool(_get_groq_api_key())
 
 
+def _cloud_backend_not_configured_message() -> str:
+    return (
+        "### Cloud model backend is not configured\n\n"
+        "Voreenth successfully inspected and approved this prompt, but the hosted "
+        "Groq Cloud backend is not configured yet.\n\n"
+        "To enable live model responses on Streamlit Cloud, add `GROQ_API_KEY` "
+        "to Streamlit secrets.\n\n"
+        "The runtime security workflow still executed successfully:\n\n"
+        "- Prompt inspection completed\n"
+        "- Risk scoring completed\n"
+        "- Policy enforcement completed\n"
+        "- Request telemetry was logged"
+    )
+
+
+def _cloud_backend_rate_limit_message() -> str:
+    return (
+        "## ⚠️ Groq Cloud Rate Limit Reached\n\n"
+        "Groq Cloud is temporarily unavailable or has reached its current rate limit.\n\n"
+        "Voreenth successfully completed:\n\n"
+        "✅ Runtime Prompt Inspection\n"
+        "✅ Risk Scoring\n"
+        "✅ Policy Enforcement\n"
+        "✅ SQLite Telemetry Logging\n\n"
+        "Please try again later, switch to **Demo Mode**, or run Voreenth locally using "
+        "**Local Ollama**."
+    )
+
+
+def _cloud_backend_timeout_message() -> str:
+    return (
+        "## ⚠️ Cloud Backend Timeout\n\n"
+        "The Groq Cloud backend did not respond within the expected time.\n\n"
+        "Voreenth successfully completed all runtime security inspection and policy "
+        "enforcement before the model request.\n\n"
+        "Please retry shortly or switch to **Demo Mode**."
+    )
+
+
+def _cloud_backend_unavailable_message() -> str:
+    return (
+        "## ⚠️ Cloud Backend Unavailable\n\n"
+        "The hosted Groq backend is currently unavailable.\n\n"
+        "Voreenth successfully completed runtime inspection, risk scoring, policy "
+        "enforcement, and telemetry logging.\n\n"
+        "Please retry later, use **Demo Mode**, or run Voreenth locally with "
+        "**Local Ollama**."
+    )
+
+
 def ask_groq(prompt: str, model_name: str = DEFAULT_GROQ_MODEL) -> str:
     api_key = _get_groq_api_key()
 
     if not api_key:
-        return (
-            "### Cloud model backend is not configured\n\n"
-            "Voreenth successfully inspected and approved this prompt, but the hosted "
-            "Groq Cloud backend is not configured yet.\n\n"
-            "To enable live model responses on Streamlit Cloud, add `GROQ_API_KEY` "
-            "to Streamlit secrets.\n\n"
-            "The runtime security workflow still executed successfully:\n\n"
-            "- Prompt inspection completed\n"
-            "- Risk scoring completed\n"
-            "- Policy enforcement completed\n"
-            "- Request telemetry was logged"
-        )
+        return _cloud_backend_not_configured_message()
 
     payload = {
         "model": model_name,
@@ -73,21 +112,40 @@ def ask_groq(prompt: str, model_name: str = DEFAULT_GROQ_MODEL) -> str:
         "max_tokens": 350,
     }
 
-    response = requests.post(
-        GROQ_ENDPOINT,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        json=payload,
-        timeout=60,
-    )
+    try:
+        response = requests.post(
+            GROQ_ENDPOINT,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=60,
+        )
 
-    response.raise_for_status()
-    data = response.json()
+        if response.status_code == 429:
+            return _cloud_backend_rate_limit_message()
 
-    raw_response = data["choices"][0]["message"]["content"]
-    return clean_model_response(raw_response)
+        response.raise_for_status()
+        data = response.json()
+
+        raw_response = data["choices"][0]["message"]["content"]
+        return clean_model_response(raw_response)
+
+    except requests.Timeout:
+        return _cloud_backend_timeout_message()
+
+    except requests.RequestException:
+        return _cloud_backend_unavailable_message()
+
+    except (KeyError, IndexError, TypeError, ValueError):
+        return (
+            "## ⚠️ Cloud Backend Response Error\n\n"
+            "The hosted model returned an unexpected response format.\n\n"
+            "Voreenth still completed prompt inspection, risk scoring, policy enforcement, "
+            "and telemetry logging.\n\n"
+            "Please retry later or switch to **Demo Mode**."
+        )
 
 
 def ask_ollama(prompt: str, model_name: str = DEFAULT_MODEL) -> str:
