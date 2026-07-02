@@ -1,0 +1,339 @@
+import re
+import unicodedata
+from dataclasses import dataclass
+from typing import List
+
+
+# ============================================================
+# Jibril Anifowoshe's Voreenth Policy Engine
+# Purpose:
+# Inspect prompts before they reach the LLM, classify risk,
+# assign severity, and enforce ALLOW / BLOCK decisions.
+# ============================================================
+
+
+@dataclass
+class PolicyResult:
+    risk_score: int
+    severity: str
+    risk_level: str
+    decision: str
+    reasons: List[str]
+    categories: List[str]
+
+
+# ============================================================
+# Text Normalization
+# Purpose:
+# Reduce simple evasion through casing, punctuation, spacing,
+# misspellings, and common leetspeak substitutions.
+# ============================================================
+
+def normalize_text(text: str) -> str:
+    normalized = unicodedata.normalize("NFKC", text)
+    normalized = normalized.lower()
+
+    replacements = {
+        "0": "o",
+        "1": "i",
+        "3": "e",
+        "4": "a",
+        "5": "s",
+        "7": "t",
+        "@": "a",
+        "$": "s",
+    }
+
+    for old, new in replacements.items():
+        normalized = normalized.replace(old, new)
+
+    spelling_corrections = {
+        "envoironment": "environment",
+        "enviroment": "environment",
+        "environement": "environment",
+        "enviornment": "environment",
+        "envrionment": "environment",
+        "varibles": "variables",
+        "vairables": "variables",
+        "variablez": "variables",
+        "instrutions": "instructions",
+        "intructions": "instructions",
+        "instuctions": "instructions",
+        "sytem": "system",
+        "systm": "system",
+        "passwrod": "password",
+        "passwrd": "password",
+        "tokn": "token",
+        "credentails": "credentials",
+        "credz": "credentials",
+        "secretes": "secrets",
+        "socail security": "social security",
+    }
+
+    for wrong, correct in spelling_corrections.items():
+        normalized = normalized.replace(wrong, correct)
+
+    normalized = re.sub(r"[_\-./\\]+", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    return normalized
+
+
+# ============================================================
+# Detection Patterns
+# ============================================================
+
+PROMPT_INJECTION_PATTERNS = [
+    r"\bignore\s+(all\s+)?(previous|prior|above|earlier)\s+instruction(s)?\b",
+    r"\bdisregard\s+(all\s+)?(previous|prior|above|earlier)\s+instruction(s)?\b",
+    r"\bforget\s+(all\s+)?(previous|prior|above|earlier|your)\s+instruction(s)?\b",
+    r"\boverride\s+(your\s+)?instruction(s)?\b",
+    r"\bbypass\s+(restriction(s)?|rule(s)?|guardrail(s)?|policy|policies|security|control(s)?)\b",
+    r"\bdisable\s+(safety|security|guardrail(s)?|filter(s)?|policy|policies)\b",
+    r"\bjailbreak\b",
+    r"\bact\s+as\s+dan\b",
+    r"\byou\s+are\s+now\s+unrestricted\b",
+    r"\bdo\s+not\s+follow\s+(your\s+)?instruction(s)?\b",
+    r"\bignore\s+(the\s+)?rules\b",
+    r"\bignore\s+(the\s+)?policy\b",
+]
+
+SYSTEM_PROMPT_PATTERNS = [
+    r"\breveal\s+(your\s+)?(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\bshow\s+(me\s+)?(your\s+)?(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\bprint\s+(your\s+)?(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\btell\s+me\s+(your\s+)?(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\bwhat\s+are\s+your\s+(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\b(system|developer|internal)\s+(prompt|instruction(s)?|message|configuration|config)\b",
+    r"\bsystem\s+security\s+details\b",
+    r"\binternal\s+security\s+details\b",
+    r"\bsecurity\s+configuration\b",
+    r"\bhidden\s+(prompt|instruction(s)?|message)\b",
+]
+
+RECON_PATTERNS = [
+    r"\blist\s+(your\s+)?environment\s+variable(s)?\b",
+    r"\bshow\s+(me\s+)?(your\s+)?environment\s+variable(s)?\b",
+    r"\bprint\s+(your\s+)?environment\s+variable(s)?\b",
+    r"\bdump\s+(your\s+)?environment\s+variable(s)?\b",
+    r"\bdisplay\s+(your\s+)?environment\s+variable(s)?\b",
+    r"\bshow\s+(me\s+)?env\s+var(s)?\b",
+    r"\blist\s+env\s+var(s)?\b",
+    r"\bprintenv\b",
+    r"\bwhoami\b",
+    r"\buname\s+a\b",
+    r"\bhostname\b",
+    r"\bifconfig\b",
+    r"\bipconfig\b",
+    r"\bnetstat\b",
+    r"\bps\s+aux\b",
+    r"\blist\s+(local\s+)?file(s)?\b",
+    r"\bshow\s+(me\s+)?(local\s+)?file(s)?\b",
+    r"\bshow\s+(me\s+)?(your\s+)?system\s+information\b",
+    r"\bgive\s+(me\s+)?(your\s+)?system\s+information\b",
+    r"\bwhat\s+(operating\s+system|os)\s+are\s+you\s+running\b",
+    r"\blist\s+(installed\s+)?package(s)?\b",
+    r"\bshow\s+(installed\s+)?package(s)?\b",
+    r"\bshow\s+(me\s+)?network\s+interface(s)?\b",
+    r"\blist\s+(mounted\s+)?drive(s)?\b",
+    r"\bshow\s+(me\s+)?configuration\s+file(s)?\b",
+    r"\bshow\s+(me\s+)?env\b",
+    r"\bshow\s+(me\s+)?dotenv\b",
+    r"\bshow\s+(me\s+)?path\b",
+    r"\becho\s+\$path\b",
+    r"\becho\s+\$home\b",
+]
+
+SECRET_PATTERNS = [
+    r"\bsk\s+[a-zA-Z0-9_\-]{10,}\b",
+    r"\bsk-[A-Za-z0-9_\-]{10,}\b",
+    r"\bAKIA[0-9A-Z]{16}\b",
+    r"\bAIza[0-9A-Za-z_\-]{20,}\b",
+    r"\b(api\s*key|secret|password|passwd|pwd|token|bearer\s+token)\b\s*[:=]?\s*[A-Za-z0-9_\-.]{6,}",
+    r"\bgithub\s*token\b\s*[:=]?\s*[A-Za-z0-9_\-]{10,}",
+    r"\bprivate\s*key\b",
+]
+
+SECRET_REQUEST_PATTERNS = [
+    r"\b(give|show|reveal|print|tell|list)\s+(me\s+)?(all\s+)?(api\s+key(s)?|token(s)?|password(s)?|secret(s)?|credential(s)?|private\s+key(s)?)\b",
+    r"\b(system|internal|admin|root)\s+(password|token|secret|credential|api\s+key)\b",
+    r"\bshow\s+(me\s+)?stored\s+secret(s)?\b",
+    r"\blist\s+(all\s+)?credential(s)?\b",
+]
+
+PII_VALUE_PATTERNS = [
+    r"\b\d{3}-\d{2}-\d{4}\b",
+    r"\b\d{9}\b",
+    r"\b\d{16}\b",
+    r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
+]
+
+PII_REQUEST_PATTERNS = [
+    r"\b(give|show|reveal|print|tell|list)\s+(me\s+)?(.*\s+)?(social\s+security\s+number|ssn)\b",
+    r"\b(social\s+security\s+number|ssn)\b",
+    r"\b(customer|employee|user|patient|client)\s+(ssn|social\s+security|date\s+of\s+birth|dob|passport|credit\s+card)\b",
+    r"\b(personal|private|confidential)\s+(information|data|record(s)?|detail(s)?)\b",
+]
+
+
+# ============================================================
+# Helper Functions
+# ============================================================
+
+def _matches(patterns: List[str], text: str) -> bool:
+    return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
+
+
+def _add_detection(
+    score: int,
+    reasons: List[str],
+    categories: List[str],
+    score_to_add: int,
+    reason: str,
+    category: str,
+) -> int:
+    score += score_to_add
+
+    if reason not in reasons:
+        reasons.append(reason)
+
+    if category not in categories:
+        categories.append(category)
+
+    return score
+
+
+def classify_severity(score: int) -> str:
+    if score >= 80:
+        return "Critical"
+    if score >= 50:
+        return "High"
+    if score >= 25:
+        return "Medium"
+    return "Low"
+
+
+def classify_risk_level(score: int) -> str:
+    return classify_severity(score)
+
+
+# ============================================================
+# Main Policy Evaluation Function
+# ============================================================
+
+def evaluate_prompt(prompt: str) -> dict:
+    raw_text = prompt.strip()
+    text = normalize_text(raw_text)
+
+    score = 0
+    reasons: List[str] = []
+    categories: List[str] = []
+
+    if not raw_text:
+        return {
+            "risk_score": 0,
+            "severity": "Low",
+            "risk_level": "Low",
+            "decision": "ALLOW",
+            "reasons": ["No input provided"],
+            "categories": ["Input Validation"],
+        }
+
+    if _matches(PROMPT_INJECTION_PATTERNS, text):
+        score = _add_detection(
+            score,
+            reasons,
+            categories,
+            70,
+            "Instruction override or prompt injection pattern detected",
+            "Prompt Injection",
+        )
+
+    if _matches(SYSTEM_PROMPT_PATTERNS, text):
+        score = _add_detection(
+            score,
+            reasons,
+            categories,
+            60,
+            "System, developer, or internal instruction extraction attempt detected",
+            "System Prompt Extraction",
+        )
+
+    if _matches(RECON_PATTERNS, text):
+        score = _add_detection(
+            score,
+            reasons,
+            categories,
+            55,
+            "System, environment, file, or infrastructure reconnaissance pattern detected",
+            "Environment Reconnaissance",
+        )
+
+    if _matches(SECRET_PATTERNS, text):
+        score = _add_detection(
+            score,
+            reasons,
+            categories,
+            65,
+            "Potential credential, token, API key, password, or secret detected",
+            "Secret Exposure",
+        )
+
+    if _matches(SECRET_REQUEST_PATTERNS, text):
+        score = _add_detection(
+            score,
+            reasons,
+            categories,
+            65,
+            "Request for credentials, secrets, tokens, or sensitive security material detected",
+            "Secret Extraction Attempt",
+        )
+
+    if _matches(PII_VALUE_PATTERNS, text):
+        score = _add_detection(
+            score,
+            reasons,
+            categories,
+            45,
+            "Potential sensitive personal data value detected",
+            "Sensitive Data Exposure",
+        )
+
+    if _matches(PII_REQUEST_PATTERNS, text):
+        score = _add_detection(
+            score,
+            reasons,
+            categories,
+            55,
+            "Request for regulated or personally identifiable information detected",
+            "Sensitive Data Request",
+        )
+
+    if len(raw_text) > 3000:
+        score = _add_detection(
+            score,
+            reasons,
+            categories,
+            15,
+            "Prompt length exceeds local safety threshold",
+            "Input Size",
+        )
+
+    score = min(score, 100)
+
+    severity = classify_severity(score)
+    risk_level = classify_risk_level(score)
+    decision = "BLOCK" if score >= 50 else "ALLOW"
+
+    if not reasons:
+        reasons.append("No policy violations detected")
+        categories.append("Clean Prompt")
+
+    return {
+        "risk_score": score,
+        "severity": severity,
+        "risk_level": risk_level,
+        "decision": decision,
+        "reasons": reasons,
+        "categories": categories,
+    }
