@@ -244,12 +244,12 @@ if backend == "☁️ Cloud LLM":
     model_name = st.sidebar.text_input(
         "Cloud Model",
         value=DEFAULT_GROQ_MODEL,
-        help="Current provider: Groq. Example: llama-3.1-8b-instant, llama-3.3-70b-versatile",
+        help="Current provider: Cloud LLM. Example: llama-3.1-8b-instant, llama-3.3-70b-versatile",
     )
 
     if check_groq_ready():
         st.sidebar.success("☁️ Cloud LLM: Ready")
-        st.sidebar.caption(f"Provider: Groq • Model: {model_name}")
+        st.sidebar.caption(f"Provider: Cloud LLM • Model: {model_name}")
     else:
         st.sidebar.warning("☁️ Cloud LLM: Not Configured")
         st.sidebar.caption(
