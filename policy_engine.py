@@ -4,14 +4,6 @@ from dataclasses import dataclass
 from typing import List
 
 
-# ============================================================
-# Jibril Anifowoshe's Voreenth Policy Engine
-# Purpose:
-# Inspect prompts before they reach the LLM, classify risk,
-# assign severity, and enforce ALLOW / BLOCK decisions.
-# ============================================================
-
-
 @dataclass
 class PolicyResult:
     risk_score: int
@@ -22,13 +14,8 @@ class PolicyResult:
     categories: List[str]
 
 
-# ============================================================
-# Text Normalization
-# ============================================================
-
 def normalize_text(text: str) -> str:
-    normalized = unicodedata.normalize("NFKC", text)
-    normalized = normalized.lower()
+    normalized = unicodedata.normalize("NFKC", text).lower()
 
     replacements = {
         "@": "a",
@@ -70,10 +57,6 @@ def normalize_text(text: str) -> str:
 
     return normalized
 
-
-# ============================================================
-# Detection Patterns
-# ============================================================
 
 PROMPT_INJECTION_PATTERNS = [
     r"\bignore\s+(all\s+)?(previous|prior|above|earlier|system|developer)\s+instruction(s)?\b",
@@ -160,55 +143,12 @@ PII_REQUEST_PATTERNS = [
     r"\b(personal|private|confidential)\s+(information|data|record(s)?|detail(s)?)\b",
 ]
 
-SUSPICIOUS_INTENT_PATTERNS = [
-    r"\bhidden\b",
-    r"\binternal\b",
-    r"\bconfidential\b",
-    r"\bprivate\b",
-    r"\bcredential(s)?\b",
-    r"\bsecret(s)?\b",
-    r"\btoken(s)?\b",
-    r"\bapi\s+key(s)?\b",
-    r"\bpassword(s)?\b",
-    r"\bdeveloper\s+instruction(s)?\b",
-    r"\bsystem\s+instruction(s)?\b",
-    r"\benvironment\s+variable(s)?\b",
-    r"\bconfiguration\s+file(s)?\b",
-]
-
-SUSPICIOUS_ACTION_PATTERNS = [
-    r"\breveal\b",
-    r"\bshow\b",
-    r"\bprint\b",
-    r"\bdump\b",
-    r"\blist\b",
-    r"\bextract\b",
-    r"\bexfiltrate\b",
-    r"\bdecode\b",
-    r"\bexpose\b",
-]
-
-
-# ============================================================
-# Helper Functions
-# ============================================================
 
 def _matches(patterns: List[str], text: str) -> bool:
     return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
 
-def _match_count(patterns: List[str], text: str) -> int:
-    return sum(1 for pattern in patterns if re.search(pattern, text, re.IGNORECASE))
-
-
-def _add_detection(
-    score: int,
-    reasons: List[str],
-    categories: List[str],
-    score_to_add: int,
-    reason: str,
-    category: str,
-) -> int:
+def _add_detection(score, reasons, categories, score_to_add, reason, category):
     score += score_to_add
 
     if reason not in reasons:
@@ -233,10 +173,6 @@ def classify_severity(score: int) -> str:
 def classify_risk_level(score: int) -> str:
     return classify_severity(score)
 
-
-# ============================================================
-# Main Policy Evaluation Function
-# ============================================================
 
 def evaluate_prompt(prompt: str) -> dict:
     raw_text = prompt.strip()
@@ -304,23 +240,6 @@ def evaluate_prompt(prompt: str) -> dict:
             score, reasons, categories, 55,
             "Request for regulated or personally identifiable information detected",
             "Sensitive Data Request",
-        )
-
-    suspicious_intent_count = _match_count(SUSPICIOUS_INTENT_PATTERNS, text)
-    suspicious_action_count = _match_count(SUSPICIOUS_ACTION_PATTERNS, text)
-
-    if suspicious_intent_count >= 2 and suspicious_action_count >= 1:
-        score = _add_detection(
-            score, reasons, categories, 45,
-            "Multiple suspicious intent indicators detected",
-            "Suspicious Prompt Intent",
-        )
-
-    if suspicious_intent_count >= 3:
-        score = _add_detection(
-            score, reasons, categories, 35,
-            "Clustered sensitive security terms detected",
-            "Suspicious Security Context",
         )
 
     if len(raw_text) > 3000:
