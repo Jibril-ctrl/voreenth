@@ -289,7 +289,7 @@ st.sidebar.caption(
 
 st.sidebar.divider()
 
-if st.sidebar.button("Reset Local History"):
+if st.sidebar.button("Clear Session"):
     reset_history()
     st.sidebar.success("History cleared.")
     st.rerun()
