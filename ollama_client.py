@@ -2,11 +2,24 @@ import os
 import re
 import requests
 
-OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
-DEFAULT_MODEL = "qwen3:1.7b"
 
-GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
-DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant"
+BACKEND_CLOUD = "cloud"
+BACKEND_LOCAL = "local_ollama"
+BACKEND_SIMULATION = "simulation"
+
+BACKEND_OPTIONS = {
+    "☁️ Cloud LLM": BACKEND_CLOUD,
+    "💻 Local Ollama": BACKEND_LOCAL,
+    "🎭 Simulation Mode": BACKEND_SIMULATION,
+}
+
+OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
+DEFAULT_LOCAL_MODEL = "qwen3:1.7b"
+DEFAULT_MODEL = DEFAULT_LOCAL_MODEL
+
+CLOUD_LLM_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
+DEFAULT_CLOUD_MODEL = "llama-3.1-8b-instant"
+DEFAULT_GROQ_MODEL = DEFAULT_CLOUD_MODEL
 
 
 def clean_model_response(response_text: str) -> str:
@@ -23,74 +36,75 @@ def clean_model_response(response_text: str) -> str:
     return response_text.strip()
 
 
-def _get_groq_api_key() -> str:
+def _get_cloud_api_key() -> str:
     try:
         import streamlit as st
-
         return st.secrets.get("GROQ_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
     except Exception:
         return os.getenv("GROQ_API_KEY", "")
 
 
+def check_cloud_ready() -> bool:
+    return bool(_get_cloud_api_key())
+
+
 def check_groq_ready() -> bool:
-    return bool(_get_groq_api_key())
+    return check_cloud_ready()
 
 
-def _cloud_backend_not_configured_message() -> str:
+def _not_configured_message() -> str:
     return (
-        "### Cloud model backend is not configured\n\n"
+        "### Cloud LLM is not configured\n\n"
         "Voreenth successfully inspected and approved this prompt, but the hosted "
-        "Groq Cloud backend is not configured yet.\n\n"
-        "To enable live model responses on Streamlit Cloud, add `GROQ_API_KEY` "
-        "to Streamlit secrets.\n\n"
+        "cloud model backend is not configured.\n\n"
         "The runtime security workflow still executed successfully:\n\n"
         "- Prompt inspection completed\n"
         "- Risk scoring completed\n"
         "- Policy enforcement completed\n"
-        "- Request telemetry was logged"
+        "- Request telemetry was logged\n\n"
+        "Use **Simulation Mode** or run Voreenth locally with **Local Ollama**."
     )
 
 
-def _cloud_backend_rate_limit_message() -> str:
+def _rate_limit_message() -> str:
     return (
-        "## ⚠️ Groq Cloud Rate Limit Reached\n\n"
-        "Groq Cloud is temporarily unavailable or has reached its current rate limit.\n\n"
+        "## ⚠️ Cloud LLM Rate Limit Reached\n\n"
+        "The hosted Cloud LLM is temporarily unavailable or has reached its current rate limit.\n\n"
         "Voreenth successfully completed:\n\n"
         "✅ Runtime Prompt Inspection\n"
         "✅ Risk Scoring\n"
         "✅ Policy Enforcement\n"
         "✅ SQLite Telemetry Logging\n\n"
-        "Please try again later, switch to **Demo Mode**, or run Voreenth locally using "
+        "Please try again later, switch to **Simulation Mode**, or run Voreenth locally using "
         "**Local Ollama**."
     )
 
 
-def _cloud_backend_timeout_message() -> str:
+def _timeout_message() -> str:
     return (
-        "## ⚠️ Cloud Backend Timeout\n\n"
-        "The Groq Cloud backend did not respond within the expected time.\n\n"
-        "Voreenth successfully completed all runtime security inspection and policy "
-        "enforcement before the model request.\n\n"
-        "Please retry shortly or switch to **Demo Mode**."
+        "## ⚠️ Cloud LLM Timeout\n\n"
+        "The hosted model backend did not respond within the expected time.\n\n"
+        "Voreenth successfully completed prompt inspection, risk scoring, policy enforcement, "
+        "and telemetry logging.\n\n"
+        "Please retry shortly or switch to **Simulation Mode**."
     )
 
 
-def _cloud_backend_unavailable_message() -> str:
+def _unavailable_message() -> str:
     return (
-        "## ⚠️ Cloud Backend Unavailable\n\n"
-        "The hosted Groq backend is currently unavailable.\n\n"
-        "Voreenth successfully completed runtime inspection, risk scoring, policy "
-        "enforcement, and telemetry logging.\n\n"
-        "Please retry later, use **Demo Mode**, or run Voreenth locally with "
-        "**Local Ollama**."
+        "## ⚠️ Cloud LLM Unavailable\n\n"
+        "The hosted model backend is currently unavailable.\n\n"
+        "Voreenth successfully completed runtime inspection, risk scoring, policy enforcement, "
+        "and telemetry logging.\n\n"
+        "Please retry later, use **Simulation Mode**, or run Voreenth locally with **Local Ollama**."
     )
 
 
-def ask_groq(prompt: str, model_name: str = DEFAULT_GROQ_MODEL) -> str:
-    api_key = _get_groq_api_key()
+def ask_cloud_llm(prompt: str, model_name: str = DEFAULT_CLOUD_MODEL) -> str:
+    api_key = _get_cloud_api_key()
 
     if not api_key:
-        return _cloud_backend_not_configured_message()
+        return _not_configured_message()
 
     payload = {
         "model": model_name,
@@ -114,7 +128,7 @@ def ask_groq(prompt: str, model_name: str = DEFAULT_GROQ_MODEL) -> str:
 
     try:
         response = requests.post(
-            GROQ_ENDPOINT,
+            CLOUD_LLM_ENDPOINT,
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
@@ -124,31 +138,30 @@ def ask_groq(prompt: str, model_name: str = DEFAULT_GROQ_MODEL) -> str:
         )
 
         if response.status_code == 429:
-            return _cloud_backend_rate_limit_message()
+            return _rate_limit_message()
 
         response.raise_for_status()
         data = response.json()
 
-        raw_response = data["choices"][0]["message"]["content"]
-        return clean_model_response(raw_response)
+        return clean_model_response(data["choices"][0]["message"]["content"])
 
     except requests.Timeout:
-        return _cloud_backend_timeout_message()
+        return _timeout_message()
 
     except requests.RequestException:
-        return _cloud_backend_unavailable_message()
+        return _unavailable_message()
 
     except (KeyError, IndexError, TypeError, ValueError):
         return (
-            "## ⚠️ Cloud Backend Response Error\n\n"
+            "## ⚠️ Cloud LLM Response Error\n\n"
             "The hosted model returned an unexpected response format.\n\n"
             "Voreenth still completed prompt inspection, risk scoring, policy enforcement, "
             "and telemetry logging.\n\n"
-            "Please retry later or switch to **Demo Mode**."
+            "Please retry later or switch to **Simulation Mode**."
         )
 
 
-def ask_ollama(prompt: str, model_name: str = DEFAULT_MODEL) -> str:
+def ask_ollama(prompt: str, model_name: str = DEFAULT_LOCAL_MODEL) -> str:
     payload = {
         "model": model_name,
         "prompt": prompt,
@@ -177,19 +190,18 @@ def ask_ollama(prompt: str, model_name: str = DEFAULT_MODEL) -> str:
     response.raise_for_status()
     data = response.json()
 
-    raw_response = data.get("response", "")
-    return clean_model_response(raw_response)
+    return clean_model_response(data.get("response", ""))
 
 
-def ask_demo(prompt: str) -> str:
+def ask_simulation(prompt: str) -> str:
     return (
-        "### Demo Mode Response\n\n"
+        "### Simulation Mode Response\n\n"
         "Voreenth successfully inspected this prompt and allowed it through the runtime "
         "security gateway.\n\n"
         "In a production deployment, this approved request would be forwarded to the "
-        "configured enterprise model backend, such as Groq, Azure OpenAI, Amazon Bedrock, "
+        "configured enterprise model backend, such as Azure OpenAI, Amazon Bedrock, "
         "Google Vertex AI, Anthropic Claude, or a self-hosted model.\n\n"
-        "This demo response confirms the security workflow executed successfully:\n\n"
+        "This simulation confirms the security workflow executed successfully:\n\n"
         "- Prompt inspection completed\n"
         "- Risk scoring completed\n"
         "- Policy decision returned `ALLOW`\n"
@@ -198,13 +210,13 @@ def ask_demo(prompt: str) -> str:
 
 
 def ask_llm(prompt: str, backend: str, model_name: str) -> str:
-    if backend == "Groq Cloud":
-        return ask_groq(prompt, model_name=model_name)
+    if backend == BACKEND_CLOUD:
+        return ask_cloud_llm(prompt, model_name=model_name)
 
-    if backend == "Local Ollama":
+    if backend == BACKEND_LOCAL:
         return ask_ollama(prompt, model_name=model_name)
 
-    return ask_demo(prompt)
+    return ask_simulation(prompt)
 
 
 def check_ollama_health() -> bool:
