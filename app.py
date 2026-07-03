@@ -9,10 +9,14 @@ from database import (
     reset_history,
 )
 from ollama_client import (
-    DEFAULT_MODEL,
-    DEFAULT_GROQ_MODEL,
+    BACKEND_CLOUD,
+    BACKEND_LOCAL,
+    BACKEND_SIMULATION,
+    BACKEND_OPTIONS,
+    DEFAULT_CLOUD_MODEL,
+    DEFAULT_LOCAL_MODEL,
     ask_llm,
-    check_groq_ready,
+    check_cloud_ready,
     check_ollama_health,
 )
 from policy_engine import evaluate_prompt
@@ -201,66 +205,56 @@ def response_card(response_text: str):
 
 def render_metrics():
     metrics = get_dashboard_metrics()
+    c1, c2, c3, c4, c5 = st.columns(5)
 
-    metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
-
-    with metric_col1:
-        st.metric("Total Requests", metrics["total"])
-
-    with metric_col2:
-        st.metric("Allowed", metrics["allowed"])
-
-    with metric_col3:
-        st.metric("Blocked", metrics["blocked"])
-
-    with metric_col4:
-        st.metric("Critical", metrics["critical"])
-
-    with metric_col5:
-        st.metric("Avg Risk", metrics["avg_risk"])
+    c1.metric("Total Requests", metrics["total"])
+    c2.metric("Allowed", metrics["allowed"])
+    c3.metric("Blocked", metrics["blocked"])
+    c4.metric("Critical", metrics["critical"])
+    c5.metric("Avg Risk", metrics["avg_risk"])
 
 
-# ============================================================
-# Sidebar Configuration
-# ============================================================
+# Sidebar
 
 st.sidebar.title("Jibril's Voreenth")
 st.sidebar.caption("AI Runtime Security Gateway")
-st.sidebar.caption("Open-source prototype")
+st.sidebar.caption("Enterprise AI Security Research Project")
 st.sidebar.caption("Designed and Developed by Jibril Anifowoshe")
 
-backend = st.sidebar.radio(
+backend_label = st.sidebar.radio(
     "Model Backend",
-    ["☁️ Cloud LLM", "💻 Local Ollama", "🎭 Simulation Mode"],
+    list(BACKEND_OPTIONS.keys()),
     index=0,
     help=(
         "Cloud LLM is recommended for the hosted Streamlit app. "
-        "Local Ollama is intended for local workstation use. "
+        "Local Ollama is intended for workstation use. "
         "Simulation Mode validates the security workflow without calling a model."
     ),
 )
 
-if backend == "☁️ Cloud LLM":
+backend = BACKEND_OPTIONS[backend_label]
+
+if backend == BACKEND_CLOUD:
     model_name = st.sidebar.text_input(
-        "Cloud Model",
-        value=DEFAULT_GROQ_MODEL,
-        help="Current provider: Cloud LLM. Example: llama-3.1-8b-instant, llama-3.3-70b-versatile",
+        "Foundation Model",
+        value=DEFAULT_CLOUD_MODEL,
+        help="Hosted foundation model used by the public application.",
     )
 
-    if check_groq_ready():
+    if check_cloud_ready():
         st.sidebar.success("☁️ Cloud LLM: Ready")
-        st.sidebar.caption(f"Provider: Cloud LLM • Model: {model_name}")
+        st.sidebar.caption(f"Model: {model_name}")
     else:
         st.sidebar.warning("☁️ Cloud LLM: Not Configured")
         st.sidebar.caption(
-            "No cloud provider credentials detected. "
-            "Configure GROQ_API_KEY, use 💻 Local Ollama, or switch to 🎭 Simulation Mode."
+            "No cloud model credentials detected. "
+            "Use Local Ollama or Simulation Mode."
         )
 
-elif backend == "💻 Local Ollama":
+elif backend == BACKEND_LOCAL:
     model_name = st.sidebar.text_input(
         "Ollama Model",
-        value=DEFAULT_MODEL,
+        value=DEFAULT_LOCAL_MODEL,
         help="Model must exist in Ollama. Example: qwen3:1.7b, llama3.2:3b, phi3:mini",
     )
 
@@ -272,7 +266,7 @@ elif backend == "💻 Local Ollama":
 
 else:
     model_name = "simulation-mode"
-    st.sidebar.info("🎭 Simulation Mode: No external model call")
+    st.sidebar.info("🎭 Simulation Mode")
     st.sidebar.caption("Security inspection, scoring, enforcement, and telemetry still run normally.")
 
 st.sidebar.divider()
@@ -284,39 +278,38 @@ selected_example = st.sidebar.selectbox(
 )
 
 st.sidebar.caption(
-    "Demo scenarios only pre-load example prompts. Every submitted prompt is evaluated automatically by the policy engine."
+    "Demo scenarios pre-load example prompts only. Every submitted prompt is evaluated automatically."
 )
 
 st.sidebar.divider()
 
-if st.sidebar.button("Clear Session"):
+if st.sidebar.button("Clear Dashboard"):
     reset_history()
-    st.sidebar.success("History cleared.")
+    st.sidebar.success("Dashboard history cleared.")
     st.rerun()
 
 
-# ============================================================
-# Hero / Product Positioning
-# ============================================================
+# Hero
 
 st.markdown(
     """
     <div class="voreenth-hero">
-        <div class="voreenth-kicker">AI Runtime Security Gateway • Open-Source Prototype</div>
+        <div class="voreenth-kicker">AI Runtime Security Gateway</div>
         <div class="voreenth-title">Jibril's Voreenth</div>
         <div class="voreenth-subtitle">Inspect prompts before they reach the model.</div>
         <div class="voreenth-builder">Designed and Developed by <span>Jibril Anifowoshe</span></div>
         <div class="voreenth-tagline">Never Trust. Always Verify.</div>
         <div class="voreenth-description">
-            Voreenth is an open-source prototype that demonstrates AI runtime security enforcement.
-            It detects prompt injection, system prompt extraction, environment reconnaissance,
-            secret leakage, and sensitive data exposure before requests reach an LLM.
+            Voreenth demonstrates runtime AI security enforcement by inspecting prompts,
+            assigning risk, enforcing policy decisions, and recording telemetry before
+            approved requests reach an LLM.
         </div>
         <div class="voreenth-pill-row">
             <span class="voreenth-pill">Prompt Injection</span>
             <span class="voreenth-pill">Reconnaissance</span>
             <span class="voreenth-pill">Secret Leakage</span>
             <span class="voreenth-pill">System Prompt Extraction</span>
+            <span class="voreenth-pill">DLP-like Inspection</span>
             <span class="voreenth-pill">SQLite Telemetry</span>
             <span class="voreenth-pill">Cloud LLM</span>
             <span class="voreenth-pill">Local Ollama</span>
@@ -333,30 +326,20 @@ metrics_placeholder = st.container()
 st.divider()
 
 
-# ============================================================
-# Runtime Request Inspection
-# ============================================================
-
 section_banner(
     "Runtime Request Inspection",
-    "Enter any prompt. Voreenth will evaluate it automatically before it reaches the model."
+    "Enter any prompt. Voreenth evaluates it before it reaches the model."
 )
-
-default_prompt = DEMO_PROMPTS.get(selected_example, "")
 
 prompt = st.text_area(
     "Enter any prompt",
-    value=default_prompt,
+    value=DEMO_PROMPTS.get(selected_example, ""),
     height=180,
     placeholder="Example: Explain Zero Trust Architecture.",
 )
 
 analyze_clicked = st.button("Analyze Prompt", type="primary")
 
-
-# ============================================================
-# Policy Evaluation + Enforcement
-# ============================================================
 
 if analyze_clicked:
     if not prompt.strip():
@@ -379,33 +362,25 @@ if analyze_clicked:
 
     decision_card(decision)
 
-    decision_col1, decision_col2, decision_col3, decision_col4 = st.columns(4)
-
-    with decision_col1:
-        st.metric("Risk Score", risk_score)
-
-    with decision_col2:
-        st.metric("Risk Level", risk_level)
-
-    with decision_col3:
-        st.metric("Severity", severity)
-
-    with decision_col4:
-        st.metric("Decision", decision)
+    d1, d2, d3, d4 = st.columns(4)
+    d1.metric("Risk Score", risk_score)
+    d2.metric("Risk Level", risk_level)
+    d3.metric("Severity", severity)
+    d4.metric("Decision", decision)
 
     section_banner(
         "Security Findings",
         "Prompt classification and detection results."
     )
 
-    findings_col1, findings_col2 = st.columns(2)
+    f1, f2 = st.columns(2)
 
-    with findings_col1:
+    with f1:
         st.write("**Detection Categories**")
         for category in categories:
             st.write(f"- {category}")
 
-    with findings_col2:
+    with f2:
         st.write("**Policy Reasons**")
         for reason in reasons:
             st.write(f"- {reason}")
@@ -413,20 +388,16 @@ if analyze_clicked:
     response_preview = ""
 
     if decision == "ALLOW":
-        try:
-            with st.spinner(f"Forwarding approved request to {backend}: {model_name}"):
-                model_response = ask_llm(
-                    prompt=prompt,
-                    backend=backend,
-                    model_name=model_name,
-                )
+        with st.spinner("Approved request is being forwarded to the selected model backend..."):
+            model_response = ask_llm(
+                prompt=prompt,
+                backend=backend,
+                model_name=model_name,
+            )
 
-            response_preview = model_response[:500]
-            response_card(model_response)
+        response_preview = model_response[:500]
+        response_card(model_response)
 
-        except Exception as ex:
-            st.error(f"Model Backend Error: {ex}")
-            response_preview = f"Model backend error: {ex}"
     else:
         response_preview = "Blocked by Voreenth policy engine."
 
@@ -438,11 +409,11 @@ if analyze_clicked:
         decision=decision,
         categories=", ".join(categories),
         reasons=", ".join(reasons),
-        model_used=f"{backend}: {model_name}" if decision == "ALLOW" else "",
+        model_used=f"{backend_label}: {model_name}" if decision == "ALLOW" else "",
         response_preview=response_preview,
     )
 
-    st.info("Request logged to local SQLite history.")
+    st.info("Request logged to SQLite telemetry.")
 
 
 with metrics_placeholder:
@@ -451,10 +422,6 @@ with metrics_placeholder:
 
 st.divider()
 
-
-# ============================================================
-# Security Operations Dashboard
-# ============================================================
 
 section_banner(
     "Security Operations Dashboard",
@@ -480,17 +447,15 @@ if history:
         ],
     )
 
-    dashboard_col1, dashboard_col2 = st.columns(2)
+    c1, c2 = st.columns(2)
 
-    with dashboard_col1:
+    with c1:
         st.write("**Decision Distribution**")
-        decision_counts = df["Decision"].value_counts()
-        st.bar_chart(decision_counts)
+        st.bar_chart(df["Decision"].value_counts())
 
-    with dashboard_col2:
+    with c2:
         st.write("**Risk Level Distribution**")
-        risk_counts = df["Risk Level"].value_counts()
-        st.bar_chart(risk_counts)
+        st.bar_chart(df["Risk Level"].value_counts())
 
     section_banner(
         "Request History",
