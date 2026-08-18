@@ -241,7 +241,7 @@ if backend == BACKEND_CLOUD:
         help="Hosted foundation model used by the public application.",
     )
 
-    if check_cloud_ready():
+    if check_cloud_ready(model_name):
         st.sidebar.success("☁️ Cloud LLM: Ready")
         st.sidebar.caption(f"Model: {model_name}")
     else:
