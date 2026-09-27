@@ -448,50 +448,33 @@ if st.sidebar.button("Clear Dashboard"):
 
 # Hero
 
-st.markdown(
-    """
-    <div class="voreenth-hero">
-        <div class="voreenth-kicker">
-            AI Runtime Security Gateway
-        </div>
+hero_html = (
+    '<div class="voreenth-hero">'
+    '<div class="voreenth-kicker">AI Runtime Security Gateway</div>'
+    '<div class="voreenth-title">Jibril&#39;s Voreenth</div>'
+    '<div class="voreenth-subtitle">Inspect prompts before they reach the model.</div>'
+    '<div class="voreenth-builder">Designed and Developed by <span>Jibril Anifowoshe</span></div>'
+    '<div class="voreenth-tagline">Never Trust. Always Verify.</div>'
+    '<div class="voreenth-description">'
+    'Voreenth demonstrates runtime AI security enforcement by inspecting prompts, '
+    'assigning risk, enforcing policy decisions, and recording telemetry before '
+    'approved requests reach an LLM.'
+    '</div>'
+    '<div class="voreenth-pill-row">'
+    '<span class="voreenth-pill">Prompt Injection</span>'
+    '<span class="voreenth-pill">Reconnaissance</span>'
+    '<span class="voreenth-pill">Secret Leakage</span>'
+    '<span class="voreenth-pill">System Prompt Extraction</span>'
+    '<span class="voreenth-pill">DLP-like Inspection</span>'
+    '<span class="voreenth-pill">SQLite Telemetry</span>'
+    '<span class="voreenth-pill">Cloud LLM</span>'
+    '<span class="voreenth-pill">Local Ollama</span>'
+    '<span class="voreenth-pill">Simulation Mode</span>'
+    '</div>'
+    '</div>'
+)
 
-        <div class="voreenth-title">
-            Jibril's Voreenth
-        </div>
-
-        <div class="voreenth-subtitle">
-            Inspect prompts before they reach the model.
-        </div>
-
-        <div class="voreenth-builder">
-            Designed and Developed by
-            <span>Jibril Anifowoshe</span>
-        </div>
-
-        <div class="voreenth-tagline">
-            Never Trust. Always Verify.
-        </div>
-
-        <div class="voreenth-description">
-            Voreenth demonstrates runtime AI security enforcement by
-            inspecting prompts, assigning risk, enforcing policy decisions,
-            and recording telemetry before approved requests reach an LLM.
-        </div>
-
-        <div class="voreenth-pill-row">
-            <span class="voreenth-pill">Prompt Injection</span>
-            <span class="voreenth-pill">Reconnaissance</span>
-            <span class="voreenth-pill">Secret Leakage</span>
-            <span class="voreenth-pill">System Prompt Extraction</span>
-            <span class="voreenth-pill">DLP-like Inspection</span>
-            <span class="voreenth-pill">SQLite Telemetry</span>
-            <span class="voreenth-pill">Cloud LLM</span>
-            <span class="voreenth-pill">Local Ollama</span>
-            <span class="voreenth-pill">Simulation Mode</span>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
+st.markdown(hero_html, unsafe_allow_html=True)
 )
 
 
