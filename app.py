@@ -22,6 +22,10 @@ from ollama_client import (
 from policy_engine import evaluate_prompt
 
 
+# -------------------------------------------------------------------
+# Application initialization
+# -------------------------------------------------------------------
+
 initialize_database()
 
 st.set_page_config(
@@ -31,6 +35,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
+# -------------------------------------------------------------------
+# Demo scenarios
+# -------------------------------------------------------------------
 
 DEMO_PROMPTS = {
     "None": "",
@@ -53,6 +61,10 @@ DEMO_PROMPTS = {
     ),
 }
 
+
+# -------------------------------------------------------------------
+# Voreenth UI
+# -------------------------------------------------------------------
 
 st.markdown(
     """
@@ -84,6 +96,10 @@ st.markdown(
         [data-testid="stSidebar"] * {
             color: #f3f4f6;
         }
+
+        /* -----------------------------------------------------------
+           HERO
+           ----------------------------------------------------------- */
 
         .voreenth-hero {
             background:
@@ -173,6 +189,10 @@ st.markdown(
             font-weight: 650;
         }
 
+        /* -----------------------------------------------------------
+           CARDS
+           ----------------------------------------------------------- */
+
         .section-card,
         .response-card,
         .decision-card {
@@ -213,6 +233,10 @@ st.markdown(
             font-weight: 900;
         }
 
+        /* -----------------------------------------------------------
+           MODEL DISCLOSURE
+           ----------------------------------------------------------- */
+
         .model-disclosure {
             color: #8b929e !important;
             font-size: 0.68rem !important;
@@ -222,6 +246,54 @@ st.markdown(
             margin-top: -4px;
             margin-bottom: 8px;
         }
+
+        /* -----------------------------------------------------------
+           ANALYZE BUTTON
+           ----------------------------------------------------------- */
+
+        div.stButton > button[kind="primary"] {
+            background:
+                linear-gradient(
+                    135deg,
+                    #7c3aed 0%,
+                    #6d28d9 48%,
+                    #4f46e5 100%
+                ) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(196, 181, 253, 0.42) !important;
+            border-radius: 11px !important;
+            font-weight: 750 !important;
+            box-shadow:
+                0 8px 24px rgba(109, 40, 217, 0.24),
+                inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+            transition:
+                transform 0.15s ease,
+                box-shadow 0.15s ease,
+                border-color 0.15s ease !important;
+        }
+
+        div.stButton > button[kind="primary"]:hover {
+            background:
+                linear-gradient(
+                    135deg,
+                    #8b5cf6 0%,
+                    #7c3aed 48%,
+                    #6366f1 100%
+                ) !important;
+            border-color: rgba(221, 214, 254, 0.65) !important;
+            box-shadow:
+                0 10px 30px rgba(124, 58, 237, 0.34),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+            transform: translateY(-1px);
+        }
+
+        div.stButton > button[kind="primary"]:active {
+            transform: translateY(0);
+        }
+
+        /* -----------------------------------------------------------
+           FALLBACK VISUALIZATION
+           ----------------------------------------------------------- */
 
         .chart-fallback {
             background: rgba(15, 23, 42, 0.72);
@@ -237,6 +309,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+# -------------------------------------------------------------------
+# UI helper functions
+# -------------------------------------------------------------------
 
 def section_banner(title: str, subtitle: str = ""):
     st.markdown(
@@ -318,7 +394,9 @@ def safe_bar_chart(series, fallback_label: str):
         )
 
 
+# -------------------------------------------------------------------
 # Sidebar
+# -------------------------------------------------------------------
 
 st.sidebar.title("Jibril's Voreenth")
 st.sidebar.caption("AI Runtime Security Gateway")
@@ -446,14 +524,18 @@ if st.sidebar.button("Clear Dashboard"):
         st.sidebar.error("Dashboard history could not be cleared.")
 
 
+# -------------------------------------------------------------------
 # Hero
+# -------------------------------------------------------------------
 
 hero_html = (
     '<div class="voreenth-hero">'
     '<div class="voreenth-kicker">AI Runtime Security Gateway</div>'
     '<div class="voreenth-title">Jibril&#39;s Voreenth</div>'
     '<div class="voreenth-subtitle">Inspect prompts before they reach the model.</div>'
-    '<div class="voreenth-builder">Designed and Developed by <span>Jibril Anifowoshe</span></div>'
+    '<div class="voreenth-builder">'
+    'Designed and Developed by <span>Jibril Anifowoshe</span>'
+    '</div>'
     '<div class="voreenth-tagline">Never Trust. Always Verify.</div>'
     '<div class="voreenth-description">'
     'Voreenth demonstrates runtime AI security enforcement by inspecting prompts, '
@@ -474,14 +556,24 @@ hero_html = (
     '</div>'
 )
 
-st.markdown(hero_html, unsafe_allow_html=True)
+st.markdown(
+    hero_html,
+    unsafe_allow_html=True,
 )
 
+
+# -------------------------------------------------------------------
+# Metrics
+# -------------------------------------------------------------------
 
 metrics_placeholder = st.container()
 
 st.divider()
 
+
+# -------------------------------------------------------------------
+# Runtime request inspection
+# -------------------------------------------------------------------
 
 section_banner(
     "Runtime Request Inspection",
@@ -502,6 +594,10 @@ analyze_clicked = st.button(
     type="primary",
 )
 
+
+# -------------------------------------------------------------------
+# Runtime enforcement workflow
+# -------------------------------------------------------------------
 
 if analyze_clicked:
     clean_prompt = prompt.strip()
@@ -656,12 +752,20 @@ if analyze_clicked:
         )
 
 
+# -------------------------------------------------------------------
+# Refresh metrics
+# -------------------------------------------------------------------
+
 with metrics_placeholder:
     render_metrics()
 
 
 st.divider()
 
+
+# -------------------------------------------------------------------
+# Security Operations Dashboard
+# -------------------------------------------------------------------
 
 section_banner(
     "Security Operations Dashboard",
